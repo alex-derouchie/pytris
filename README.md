@@ -1,4 +1,4 @@
-# pytris
+# Pytris
 A Tetris-like game created using Pygame
 
 # In Development
