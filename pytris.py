@@ -12,12 +12,12 @@ GREEN = pygame.Color(0,255,0)
 BLUE = pygame.Color(0,0,255)
 CYAN = pygame.Color(0,255,255)
 TETRO_COLORS = {
-	"SHAPE_O" : pygame.Color(254, 203, 0)
-	"SHAPE_T" : pygame.Color(149, 45, 152)
-	"SHAPE_I" : pygame.Color(0, 159, 218)
-	"SHAPE_L" : pygame.Color(255, 121, 0)
-	"SHAPE_J" : pygame.Color(0, 101, 189)
-	"SHAPE_S" : pygame.Color(105, 190, 40)
+	"SHAPE_O" : pygame.Color(254, 203, 0),
+	"SHAPE_T" : pygame.Color(149, 45, 152),
+	"SHAPE_I" : pygame.Color(0, 159, 218),
+	"SHAPE_L" : pygame.Color(255, 121, 0),
+	"SHAPE_J" : pygame.Color(0, 101, 189),
+	"SHAPE_S" : pygame.Color(105, 190, 40),
 	"SHAPE_Z" : pygame.Color(237, 41, 57)
 }
 
@@ -116,8 +116,8 @@ BLOCK_SIZE = (20,20)
 EDGE_BORDER = 3
 CUBE_BORDER = 2
 PLAYAREA_ORGIN = (60,60)
-PLAYAREA_RIGHT_EDGE = 260
-PLAYAREA_LEFT_EDGE = 60
+PLAYAREA_WIDTH = 200
+PLAYAREA_HEIGHT = 400
 BLOCK_OFFSET = 20
 
 #Tetromino class representing a single tetromino
@@ -144,16 +144,46 @@ def build_grid(filled_blocks = {}):
 
 #Controller Functions
 
+def get_next_tetro():
+	return Tetromino(5,0,random.choice(shapes))
+	
+def is_move_valid(Tetromino, filled_blocks = {}):
+	pass
 
 
 #View Functions
 
+def draw_window(window, grid):
+	window.fill((0,0,0))
+	
+	pygame.font.init()
+	font = pygame.font.SysFont('impact', 40)
+	label = font.render('Pytris', 1, CYAN)
+	window.blit(label, (WINDOW_SIZE[0]/2 - (label.get_width()/2), 10))
+	
+	for i in range(len(grid)):
+		for j in range(len(grid[i])):
+			pygame.draw.rect(window, grid[i][j], (PLAYAREA_ORGIN[0] + j*BLOCK_OFFSET, PLAYAREA_ORGIN[1] + i*BLOCK_OFFSET, BLOCK_OFFSET, BLOCK_OFFSET), 0)
+	pygame.draw.rect(window, CYAN, (PLAYAREA_ORGIN[0], PLAYAREA_ORGIN[1], PLAYAREA_WIDTH, PLAYAREA_HEIGHT), 4)
 
+
+#Main function & game loop
 def main(window):
 
+	grid = build_grid({}) #Grid initialization
+	grid[19][0] = TETRO_COLORS['SHAPE_L']
+	grid[19][1] = TETRO_COLORS['SHAPE_L']
+	grid[19][2] = TETRO_COLORS['SHAPE_L']
+	grid[18][2] = TETRO_COLORS['SHAPE_L']
+	grid[19][3] = TETRO_COLORS['SHAPE_I']
+	grid[19][4] = TETRO_COLORS['SHAPE_I']
+	grid[19][5] = TETRO_COLORS['SHAPE_I']
+	grid[19][6] = TETRO_COLORS['SHAPE_I']
 	clock = pygame.time.Clock() #Clock initialization
+	current_state = {} #Keeps track of coords of occupied blocks
 	
-	current_state = {}
+	draw_window(window, grid)
+	
 	
 	#Game Loop
 	while True:
