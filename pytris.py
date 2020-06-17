@@ -147,8 +147,35 @@ def build_grid(filled_blocks = {}):
 def get_next_tetro():
 	return Tetromino(5,0,random.choice(shapes))
 	
-def is_move_valid(Tetromino, filled_blocks = {}):
+def move_tetro(Tetromino, tick, filled_blocks = {}):
+	#Detect keys pressed, move tetro using check f'ns accordingly
 	pass
+	
+def is_move_valid(Tetromino, left, filled_blocks = {}):
+	tetro_position = get_tetro_position(Tetromino)
+	for pos in tetro_position:
+		if left and (pos[0]-1, pos[1]) in filled_blocks:
+			return False
+		elif (not left) and (pos[0]+1, pos[1]) in filled_blocks:
+			return False
+	return True
+	
+def is_fall_valid(Tetromino, filled_blocks = {}):
+	tetro_position = get_tetro_position(Tetromino)
+	for pos in tetro_position:
+		if (pos[0], pos[1]+1) in filled_blocks:
+			return False
+	return True
+	
+def get_tetro_position(Tetromino):
+	blocks = []
+	rotated_tetro = Tetromino.shape[Tetromino.rotation % len(Tetromino.shape)]
+	for i, line in enumerate(rotated_tetro):
+		row = list(line)
+		for j, column in enumerate(row):
+			if column == 'X':
+				blocks.append((shape.x + j, shape.y + i))
+	return blocks
 
 
 #View Functions
@@ -171,14 +198,17 @@ def draw_window(window, grid):
 def main(window):
 
 	grid = build_grid({}) #Grid initialization
-	grid[19][0] = TETRO_COLORS['SHAPE_L']
-	grid[19][1] = TETRO_COLORS['SHAPE_L']
-	grid[19][2] = TETRO_COLORS['SHAPE_L']
-	grid[18][2] = TETRO_COLORS['SHAPE_L']
-	grid[19][3] = TETRO_COLORS['SHAPE_I']
-	grid[19][4] = TETRO_COLORS['SHAPE_I']
-	grid[19][5] = TETRO_COLORS['SHAPE_I']
-	grid[19][6] = TETRO_COLORS['SHAPE_I']
+	
+	#Testing functionality
+	#grid[19][0] = TETRO_COLORS['SHAPE_L']
+	#grid[19][1] = TETRO_COLORS['SHAPE_L']
+	#grid[19][2] = TETRO_COLORS['SHAPE_L']
+	#grid[18][2] = TETRO_COLORS['SHAPE_L']
+	#grid[19][3] = TETRO_COLORS['SHAPE_I']
+	#grid[19][4] = TETRO_COLORS['SHAPE_I']
+	#grid[19][5] = TETRO_COLORS['SHAPE_I']
+	#grid[19][6] = TETRO_COLORS['SHAPE_I']
+	
 	clock = pygame.time.Clock() #Clock initialization
 	current_state = {} #Keeps track of coords of occupied blocks
 	
