@@ -11,15 +11,9 @@ RED = pygame.Color(255,0,0)
 GREEN = pygame.Color(0,255,0)
 BLUE = pygame.Color(0,0,255)
 CYAN = pygame.Color(0,255,255)
-TETRO_COLORS = {
-	"SHAPE_O" : pygame.Color(254, 203, 0),
-	"SHAPE_T" : pygame.Color(149, 45, 152),
-	"SHAPE_I" : pygame.Color(0, 159, 218),
-	"SHAPE_L" : pygame.Color(255, 121, 0),
-	"SHAPE_J" : pygame.Color(0, 101, 189),
-	"SHAPE_S" : pygame.Color(105, 190, 40),
-	"SHAPE_Z" : pygame.Color(237, 41, 57)
-}
+
+#OIZSTLJ
+TETRO_COLORS = [(254,203,0), (0,159,218), (237,41,57), (105,190,40), (149,45,152), (255,121,0), (0,101,189)]
 
 
 #Shape Definitions
@@ -109,7 +103,7 @@ SHAPE_J = [['....',
 
 #Constants
 WINDOW_SIZE = (320,560)
-FPS = 2
+FPS = 30
 
 shapes = [SHAPE_O, SHAPE_I, SHAPE_Z, SHAPE_S, SHAPE_T, SHAPE_L, SHAPE_J]
 BLOCK_SIZE = (20,20)
@@ -126,7 +120,7 @@ class Tetromino(object):
 		self.x = x
 		self.y = y
 		self.shape = shape
-		self.color = TETRO_COLORS[shape]
+		self.color = TETRO_COLORS[shapes.index(shape)]
 		self.rotation = 0
 
 #Model Functions
@@ -145,36 +139,76 @@ def build_grid(filled_blocks = {}):
 #Controller Functions
 
 def get_next_tetro():
-	return Tetromino(5,0,random.choice(shapes))
+	return Tetromino(2,-2,random.choice(shapes))
 	
-def move_tetro(Tetromino, tick, filled_blocks = {}):
-	#Detect keys pressed, move tetro using check f'ns accordingly
-	pass
+def move_tetro(tetromino, direction, filled_blocks = {}):
+	moved = False
+	if direction == 'LEFT' and is_move_valid(tetromino, True, filled_blocks):
+		old_pos = get_tetro_position(tetromino)
+		for pos in old_pos:
+			filled_blocks.pop(pos)
+		tetromino.x -= 1
+		return True
+	elif direction == 'RIGHT' and is_move_valid(tetromino, False, filled_blocks):
+		old_pos = get_tetro_position(tetromino)
+		for pos in old_pos:
+			filled_blocks.pop(pos)
+		tetromino.x += 1
+		return True
+	elif direction == 'DOWN' and is_fall_valid(tetromino, filled_blocks):
+		old_pos = get_tetro_position(tetromino)
+		for pos in old_pos:
+			filled_blocks.pop(pos)
+		tetromino.y += 1
+		return True
+	return False
 	
-def is_move_valid(Tetromino, left, filled_blocks = {}):
-	tetro_position = get_tetro_position(Tetromino)
+def is_move_valid(tetromino, left, filled_blocks = {}):
+	tetro_position = get_tetro_position(tetromino)
+	min_x = 10
+	max_x = -1
 	for pos in tetro_position:
-		if left and (pos[0]-1, pos[1]) in filled_blocks:
+		if pos[0] < min_x: min_x = pos[0]
+		if pos[0] > max_x: max_x = pos[0]
+
+	if left:
+		if min_x == 0:
 			return False
-		elif (not left) and (pos[0]+1, pos[1]) in filled_blocks:
+		for pos in tetro_position:
+			if pos[0] == min_x and ((pos[0]-1, pos[1]) in filled_blocks):
+				return False
+	else:
+		if max_x == 9:
+			return False
+		for pos in tetro_position:
+			if pos[0] == max_x and ((pos[0]+1, pos[1]) in filled_blocks):
+				return False
+	return True
+	
+def is_fall_valid(tetromino, filled_blocks = {}):
+	tetro_position = get_tetro_position(tetromino)
+	max_y = -10
+	
+	#TODO: This only checks if there are collisions with the lowest parts of the tetro, not every part of it.
+	for pos in tetro_position:
+		if pos[1] > max_y: max_y = pos[1] #Determining lowest point
+		
+	if max_y == 19: #Tetro at bottom of playarea
+			return False
+			
+	for pos in tetro_position:
+		if pos[1] == max_y and ((pos[0], pos[1]+1) in filled_blocks):
 			return False
 	return True
 	
-def is_fall_valid(Tetromino, filled_blocks = {}):
-	tetro_position = get_tetro_position(Tetromino)
-	for pos in tetro_position:
-		if (pos[0], pos[1]+1) in filled_blocks:
-			return False
-	return True
-	
-def get_tetro_position(Tetromino):
+def get_tetro_position(tetromino):
 	blocks = []
-	rotated_tetro = Tetromino.shape[Tetromino.rotation % len(Tetromino.shape)]
+	rotated_tetro = tetromino.shape[tetromino.rotation % len(tetromino.shape)]
 	for i, line in enumerate(rotated_tetro):
 		row = list(line)
 		for j, column in enumerate(row):
 			if column == 'X':
-				blocks.append((shape.x + j, shape.y + i))
+				blocks.append((tetromino.x + j, tetromino.y + i))
 	return blocks
 
 
@@ -195,9 +229,11 @@ def draw_window(window, grid):
 
 
 #Main function & game loop
-def main(window):
-
-	grid = build_grid({}) #Grid initialization
+def main(window):	
+	clock = pygame.time.Clock() #Clock initialization
+	current_state = {} #Keeps track of coords of occupied blocks
+	grid = build_grid(current_state) #Grid initialization
+	current_tetro = get_next_tetro()
 	
 	#Testing functionality
 	#grid[19][0] = TETRO_COLORS['SHAPE_L']
@@ -209,18 +245,35 @@ def main(window):
 	#grid[19][5] = TETRO_COLORS['SHAPE_I']
 	#grid[19][6] = TETRO_COLORS['SHAPE_I']
 	
-	clock = pygame.time.Clock() #Clock initialization
-	current_state = {} #Keeps track of coords of occupied blocks
-	
 	draw_window(window, grid)
-	
 	
 	#Game Loop
 	while True:
 		for event in pygame.event.get():
-			if event.type == QUIT:
+			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
+			if event.type == pygame.KEYDOWN:
+				if event.key == pygame.K_LEFT:
+					 move_tetro(current_tetro, 'LEFT', current_state)
+				if event.key == pygame.K_RIGHT:
+					move_tetro(current_tetro, 'RIGHT', current_state)
+				if event.key == pygame.K_DOWN:
+					if move_tetro(current_tetro, 'DOWN', current_state) == False:
+						current_tetro = get_next_tetro()
+				if event.key == pygame.K_UP:
+					old_pos = get_tetro_position(current_tetro)
+					for pos in old_pos:
+						current_state.pop(pos)
+					current_tetro.rotation += 1
+					
+		current_tetro_pos = get_tetro_position(current_tetro)
+		for pos in current_tetro_pos:
+			current_state[pos] = current_tetro.color
+		
+		grid = build_grid(current_state)
+		draw_window(window, grid)
+		
 		
 		pygame.display.update()
 		clock.tick(FPS)
