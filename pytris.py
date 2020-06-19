@@ -146,19 +146,22 @@ def move_tetro(tetromino, direction, filled_blocks = {}):
 	if direction == 'LEFT' and is_move_valid(tetromino, True, filled_blocks):
 		old_pos = get_tetro_position(tetromino)
 		for pos in old_pos:
-			filled_blocks.pop(pos)
+			if pos in filled_blocks:
+				filled_blocks.pop(pos)
 		tetromino.x -= 1
 		return True
 	elif direction == 'RIGHT' and is_move_valid(tetromino, False, filled_blocks):
 		old_pos = get_tetro_position(tetromino)
 		for pos in old_pos:
-			filled_blocks.pop(pos)
+			if pos in filled_blocks:
+				filled_blocks.pop(pos)
 		tetromino.x += 1
 		return True
 	elif direction == 'DOWN' and is_fall_valid(tetromino, filled_blocks):
 		old_pos = get_tetro_position(tetromino)
 		for pos in old_pos:
-			filled_blocks.pop(pos)
+			if pos in filled_blocks:
+				filled_blocks.pop(pos)
 		tetromino.y += 1
 		return True
 	return False
@@ -210,7 +213,37 @@ def get_tetro_position(tetromino):
 			if column == 'X':
 				blocks.append((tetromino.x + j, tetromino.y + i))
 	return blocks
-
+	
+def check_filled_rows(tetromino, filled_blocks = {}):
+	full_rows = []
+	tetro_position = get_tetro_position(tetromino)
+	for pos in tetro_position:
+		row_full = True
+		for i in range(10):
+			if (i, pos[1]) not in filled_blocks:
+				row_full = False
+		if row_full and pos[1] not in full_rows:
+			full_rows.append(pos[1])
+	return full_rows
+	
+def shift_upper_rows(row, filled_blocks = {}):
+	for r in range(row-1, -1, -1):
+		for c in range(10):
+			if (c, r) in filled_blocks:
+				popped_val = filled_blocks.pop((c,r))
+				filled_blocks[(c,r+1)] = popped_val
+			
+def clear_filled_rows(tetromino, filled_blocks = {}):
+	filled_rows = check_filled_rows(tetromino, filled_blocks)
+	print(filled_rows)
+	for row in filled_rows:
+		for col in range(10):
+			print(row)
+			print(col)
+			print("  ")
+			filled_blocks.pop((col, row))
+		shift_upper_rows(row, filled_blocks)
+			
 
 #View Functions
 
@@ -231,6 +264,7 @@ def draw_window(window, grid):
 #Main function & game loop
 def main(window):	
 	clock = pygame.time.Clock() #Clock initialization
+	current_time = pygame.time.get_ticks()
 	current_state = {} #Keeps track of coords of occupied blocks
 	grid = build_grid(current_state) #Grid initialization
 	current_tetro = get_next_tetro()
@@ -249,17 +283,20 @@ def main(window):
 	
 	#Game Loop
 	while True:
+		Keydown = False
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
 			if event.type == pygame.KEYDOWN:
+				keydown = True
 				if event.key == pygame.K_LEFT:
-					 move_tetro(current_tetro, 'LEFT', current_state)
+					move_tetro(current_tetro, 'LEFT', current_state)
 				if event.key == pygame.K_RIGHT:
 					move_tetro(current_tetro, 'RIGHT', current_state)
 				if event.key == pygame.K_DOWN:
 					if move_tetro(current_tetro, 'DOWN', current_state) == False:
+						clear_filled_rows(current_tetro, current_state)
 						current_tetro = get_next_tetro()
 				if event.key == pygame.K_UP:
 					old_pos = get_tetro_position(current_tetro)
@@ -270,6 +307,12 @@ def main(window):
 		current_tetro_pos = get_tetro_position(current_tetro)
 		for pos in current_tetro_pos:
 			current_state[pos] = current_tetro.color
+		
+		if Keydown == False and (pygame.time.get_ticks() - current_time > 1000):
+			current_time = pygame.time.get_ticks()
+			if move_tetro(current_tetro, 'DOWN', current_state) == False:
+				clear_filled_rows(current_tetro, current_state)
+				current_tetro = get_next_tetro()
 		
 		grid = build_grid(current_state)
 		draw_window(window, grid)
