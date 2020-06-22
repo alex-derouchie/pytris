@@ -110,6 +110,7 @@ BLOCK_SIZE = (20,20)
 EDGE_BORDER = 3
 CUBE_BORDER = 2
 PLAYAREA_ORGIN = (60,60)
+NEXT_TETRO_ORIGIN = (120, 460)
 PLAYAREA_WIDTH = 200
 PLAYAREA_HEIGHT = 400
 BLOCK_OFFSET = 20
@@ -200,7 +201,25 @@ def is_fall_valid(tetromino, filled_blocks = {}):
 			return False
 			
 	for pos in tetro_position:
-		if pos[1] == max_y and ((pos[0], pos[1]+1) in filled_blocks):
+		if ((pos[0], pos[1]+1) not in tetro_position) and ((pos[0], pos[1]+1) in filled_blocks):
+			return False
+	return True
+	
+def is_rotation_valid(tetromino, filled_blocks = {}):
+	tetro_position = get_tetro_position(tetromino)
+	blocks = []
+	rotated_tetro = tetromino.shape[(tetromino.rotation + 1) % len(tetromino.shape)]
+	for i, line in enumerate(rotated_tetro):
+		row = list(line)
+		for j, column in enumerate(row):
+			if column == 'X':
+				blocks.append((tetromino.x + j, tetromino.y + i))
+	for pos in blocks:
+		if pos[0] < 0 or pos[0] > 9:
+			return False
+		if pos[1] > 19:
+			return False
+		if pos in filled_blocks and pos not in tetro_position:
 			return False
 	return True
 	
@@ -235,51 +254,48 @@ def shift_upper_rows(row, filled_blocks = {}):
 			
 def clear_filled_rows(tetromino, filled_blocks = {}):
 	filled_rows = check_filled_rows(tetromino, filled_blocks)
-	print(filled_rows)
 	for row in filled_rows:
 		for col in range(10):
-			print(row)
-			print(col)
-			print("  ")
 			filled_blocks.pop((col, row))
 		shift_upper_rows(row, filled_blocks)
 			
 
 #View Functions
 
-def draw_window(window, grid):
+def draw_window(window, grid, next_tetro):
 	window.fill((0,0,0))
 	
 	pygame.font.init()
 	font = pygame.font.SysFont('impact', 40)
 	label = font.render('Pytris', 1, CYAN)
 	window.blit(label, (WINDOW_SIZE[0]/2 - (label.get_width()/2), 10))
+	draw_next_tetro(window, next_tetro)
 	
 	for i in range(len(grid)):
 		for j in range(len(grid[i])):
 			pygame.draw.rect(window, grid[i][j], (PLAYAREA_ORGIN[0] + j*BLOCK_OFFSET, PLAYAREA_ORGIN[1] + i*BLOCK_OFFSET, BLOCK_OFFSET, BLOCK_OFFSET), 0)
 	pygame.draw.rect(window, CYAN, (PLAYAREA_ORGIN[0], PLAYAREA_ORGIN[1], PLAYAREA_WIDTH, PLAYAREA_HEIGHT), 4)
+	
+def draw_next_tetro(window, next_tetro):
+	rotated_tetro = next_tetro.shape[0]
+	for i, line in enumerate(rotated_tetro):
+		row = list(line)
+		for j, column in enumerate(row):
+			if column == 'X':
+				pygame.draw.rect(window, next_tetro.color, (NEXT_TETRO_ORIGIN[0] + j*BLOCK_OFFSET, NEXT_TETRO_ORIGIN[1] + i*BLOCK_OFFSET, BLOCK_OFFSET, BLOCK_OFFSET), 0)
 
 
 #Main function & game loop
 def main(window):	
+	current_tetro = get_next_tetro()
 	clock = pygame.time.Clock() #Clock initialization
 	current_time = pygame.time.get_ticks()
+	pygame.key.set_repeat(1, 150)
 	current_state = {} #Keeps track of coords of occupied blocks
 	grid = build_grid(current_state) #Grid initialization
-	current_tetro = get_next_tetro()
+	next_tetro = get_next_tetro()
 	
-	#Testing functionality
-	#grid[19][0] = TETRO_COLORS['SHAPE_L']
-	#grid[19][1] = TETRO_COLORS['SHAPE_L']
-	#grid[19][2] = TETRO_COLORS['SHAPE_L']
-	#grid[18][2] = TETRO_COLORS['SHAPE_L']
-	#grid[19][3] = TETRO_COLORS['SHAPE_I']
-	#grid[19][4] = TETRO_COLORS['SHAPE_I']
-	#grid[19][5] = TETRO_COLORS['SHAPE_I']
-	#grid[19][6] = TETRO_COLORS['SHAPE_I']
-	
-	draw_window(window, grid)
+	draw_window(window, grid, next_tetro)
 	
 	#Game Loop
 	while True:
@@ -297,11 +313,13 @@ def main(window):
 				if event.key == pygame.K_DOWN:
 					if move_tetro(current_tetro, 'DOWN', current_state) == False:
 						clear_filled_rows(current_tetro, current_state)
-						current_tetro = get_next_tetro()
-				if event.key == pygame.K_UP:
+						current_tetro = next_tetro
+						next_tetro = get_next_tetro()
+				if event.key == pygame.K_UP and is_rotation_valid(current_tetro, current_state):
 					old_pos = get_tetro_position(current_tetro)
 					for pos in old_pos:
-						current_state.pop(pos)
+						if pos in current_state:
+							current_state.pop(pos)
 					current_tetro.rotation += 1
 					
 		current_tetro_pos = get_tetro_position(current_tetro)
@@ -312,10 +330,12 @@ def main(window):
 			current_time = pygame.time.get_ticks()
 			if move_tetro(current_tetro, 'DOWN', current_state) == False:
 				clear_filled_rows(current_tetro, current_state)
-				current_tetro = get_next_tetro()
+				current_tetro = next_tetro
+				next_tetro = get_next_tetro()
 		
 		grid = build_grid(current_state)
-		draw_window(window, grid)
+		draw_window(window, grid, next_tetro)
+	
 		
 		
 		pygame.display.update()
