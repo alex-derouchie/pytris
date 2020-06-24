@@ -11,6 +11,7 @@ RED = pygame.Color(255,0,0)
 GREEN = pygame.Color(0,255,0)
 BLUE = pygame.Color(0,0,255)
 CYAN = pygame.Color(0,255,255)
+GRAY = pygame.Color(150,150,150)
 
 #OIZSTLJ
 TETRO_COLORS = [(254,203,0), (0,159,218), (237,41,57), (105,190,40), (149,45,152), (255,121,0), (0,101,189)]
@@ -68,38 +69,38 @@ SHAPE_T = [['....',
 			'....',]]
 			
 SHAPE_L = [['....',
-			'...X',
-			'.XXX',
+			'..X.',
+			'XXX.',
 			'....'],
 		   ['....',
-			'..X.',
-			'..X.',
-			'..XX'],
+			'.X..',
+			'.X..',
+			'.XX.'],
 		   ['....',
 			'....',
-			'.XXX',
-			'.X..'],
+			'XXX.',
+			'X...'],
 		   ['....',
-			'.XX.',
-			'..X.',
-			'..X.',]]
+			'XX..',
+			'.X..',
+			'.X..',]]
 			
 SHAPE_J = [['....',
-			'.X..',
-			'.XXX',
+			'X...',
+			'XXX.',
 			'....'],
 		   ['....',
-			'..XX',
-			'..X.',
-			'..X.'],
+			'.XX.',
+			'.X..',
+			'.X..'],
 		   ['....',
 			'....',
-			'.XXX',
-			'...X'],
+			'XXX.',
+			'..X.'],
 		   ['....',
-			'..X.',
-			'..X.',
-			'.XX.',]]
+			'.X..',
+			'.X..',
+			'XX..',]]
 
 #Constants
 WINDOW_SIZE = (320,560)
@@ -110,10 +111,11 @@ BLOCK_SIZE = (20,20)
 EDGE_BORDER = 3
 CUBE_BORDER = 2
 PLAYAREA_ORGIN = (60,60)
-NEXT_TETRO_ORIGIN = (120, 460)
+NEXT_TETRO_ORIGIN = (65, 480)
 PLAYAREA_WIDTH = 200
 PLAYAREA_HEIGHT = 400
 BLOCK_OFFSET = 20
+SCORE = 0
 
 #Tetromino class representing a single tetromino
 class Tetromino(object):
@@ -140,26 +142,24 @@ def build_grid(filled_blocks = {}):
 #Controller Functions
 
 def get_next_tetro():
-	return Tetromino(2,-2,random.choice(shapes))
+	return Tetromino(3,-2,random.choice(shapes))
 	
 def move_tetro(tetromino, direction, filled_blocks = {}):
 	moved = False
+	old_pos = get_tetro_position(tetromino)
 	if direction == 'LEFT' and is_move_valid(tetromino, True, filled_blocks):
-		old_pos = get_tetro_position(tetromino)
 		for pos in old_pos:
 			if pos in filled_blocks:
 				filled_blocks.pop(pos)
 		tetromino.x -= 1
 		return True
 	elif direction == 'RIGHT' and is_move_valid(tetromino, False, filled_blocks):
-		old_pos = get_tetro_position(tetromino)
 		for pos in old_pos:
 			if pos in filled_blocks:
 				filled_blocks.pop(pos)
 		tetromino.x += 1
 		return True
 	elif direction == 'DOWN' and is_fall_valid(tetromino, filled_blocks):
-		old_pos = get_tetro_position(tetromino)
 		for pos in old_pos:
 			if pos in filled_blocks:
 				filled_blocks.pop(pos)
@@ -253,28 +253,59 @@ def shift_upper_rows(row, filled_blocks = {}):
 				filled_blocks[(c,r+1)] = popped_val
 			
 def clear_filled_rows(tetromino, filled_blocks = {}):
+	global SCORE
 	filled_rows = check_filled_rows(tetromino, filled_blocks)
+	SCORE += len(filled_rows)*1000
 	for row in filled_rows:
 		for col in range(10):
 			filled_blocks.pop((col, row))
 		shift_upper_rows(row, filled_blocks)
+		
+def game_over(tetromino):
+	tetro_pos = get_tetro_position(tetromino)
+	for pos in tetro_pos:
+		if pos[1] < 0:
+			return True
+	return False
+	
 			
 
 #View Functions
 
-def draw_window(window, grid, next_tetro):
+def draw_window(window, grid, next_tetro, game_done):
 	window.fill((0,0,0))
 	
 	pygame.font.init()
-	font = pygame.font.SysFont('impact', 40)
-	label = font.render('Pytris', 1, CYAN)
-	window.blit(label, (WINDOW_SIZE[0]/2 - (label.get_width()/2), 10))
-	draw_next_tetro(window, next_tetro)
+	if game_done:
+		over_font = pygame.font.SysFont('impact', 50)
+		over_label = over_font.render('GAME OVER', 1, RED)
+		window.blit(over_label, (int(WINDOW_SIZE[0]/2 - (over_label.get_width()/2)), 100))
+		score_font = pygame.font.SysFont('impact', 36)
+		score_label = score_font.render(f'SCORE: {SCORE}', 1, WHITE)
+		window.blit(score_label, (int(WINDOW_SIZE[0]/2 - (score_label.get_width()/2)), 300))
+		instruction_font = pygame.font.SysFont('impact', 26)
+		instruction_label = instruction_font.render('Press Enter for new game', 1, GRAY)
+		window.blit(instruction_label, (int(WINDOW_SIZE[0]/2 - (instruction_label.get_width()/2)), 350))
+		return
+	else:
+		title_font = pygame.font.SysFont('impact', 40)
+		title_label = title_font.render('Pytris', 1, CYAN)
+		window.blit(title_label, (int(WINDOW_SIZE[0]/2 - (title_label.get_width()/2)), 10))
+		score_font = pygame.font.SysFont('impact', 20)
+		score_label = score_font.render('SCORE', 1, WHITE)
+		score_value_label = score_font.render(f'{SCORE}', 1, WHITE)
+		window.blit(score_label,(int(WINDOW_SIZE[0]* (2/3) - (score_label.get_width()/2)), 470))
+		window.blit(score_value_label,(int(WINDOW_SIZE[0]* (2/3) - (score_value_label.get_width()/2)), 500))
+		next_tetro_font = pygame.font.SysFont('impact', 20)
+		next_tetro_label = next_tetro_font.render('NEXT', 1, WHITE)
+		window.blit(next_tetro_label,(int(WINDOW_SIZE[0]* (1/4)), 470)) 
 	
-	for i in range(len(grid)):
-		for j in range(len(grid[i])):
-			pygame.draw.rect(window, grid[i][j], (PLAYAREA_ORGIN[0] + j*BLOCK_OFFSET, PLAYAREA_ORGIN[1] + i*BLOCK_OFFSET, BLOCK_OFFSET, BLOCK_OFFSET), 0)
-	pygame.draw.rect(window, CYAN, (PLAYAREA_ORGIN[0], PLAYAREA_ORGIN[1], PLAYAREA_WIDTH, PLAYAREA_HEIGHT), 4)
+		draw_next_tetro(window, next_tetro)
+
+		for i in range(len(grid)):
+			for j in range(len(grid[i])):
+				pygame.draw.rect(window, grid[i][j], (PLAYAREA_ORGIN[0] + j*BLOCK_OFFSET, PLAYAREA_ORGIN[1] + i*BLOCK_OFFSET, BLOCK_OFFSET, BLOCK_OFFSET), 0)
+		pygame.draw.rect(window, CYAN, (PLAYAREA_ORGIN[0], PLAYAREA_ORGIN[1], PLAYAREA_WIDTH, PLAYAREA_HEIGHT), 4)
 	
 def draw_next_tetro(window, next_tetro):
 	rotated_tetro = next_tetro.shape[0]
@@ -294,53 +325,78 @@ def main(window):
 	current_state = {} #Keeps track of coords of occupied blocks
 	grid = build_grid(current_state) #Grid initialization
 	next_tetro = get_next_tetro()
+	keydown = False
+	GAME_OVER = False
+	global SCORE
 	
-	draw_window(window, grid, next_tetro)
+	draw_window(window, grid, next_tetro, GAME_OVER)
 	
 	#Game Loop
 	while True:
-		Keydown = False
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				sys.exit()
 			if event.type == pygame.KEYDOWN:
-				keydown = True
-				if event.key == pygame.K_LEFT:
-					move_tetro(current_tetro, 'LEFT', current_state)
-				if event.key == pygame.K_RIGHT:
-					move_tetro(current_tetro, 'RIGHT', current_state)
-				if event.key == pygame.K_DOWN:
-					if move_tetro(current_tetro, 'DOWN', current_state) == False:
-						clear_filled_rows(current_tetro, current_state)
-						current_tetro = next_tetro
+				if not GAME_OVER:
+					if event.key == pygame.K_LEFT:
+						move_tetro(current_tetro, 'LEFT', current_state)
+					if event.key == pygame.K_RIGHT:
+						move_tetro(current_tetro, 'RIGHT', current_state)
+					if event.key == pygame.K_DOWN:
+						keydown = True
+						if move_tetro(current_tetro, 'DOWN', current_state) == False:
+							if game_over(current_tetro):
+								GAME_OVER = True
+								draw_window(window, grid, next_tetro, GAME_OVER)	
+							clear_filled_rows(current_tetro, current_state)
+							current_tetro = next_tetro
+							next_tetro = get_next_tetro()
+							SCORE += 100
+						else:
+							SCORE += 10
+					if event.key == pygame.K_UP and is_rotation_valid(current_tetro, current_state):
+						old_pos = get_tetro_position(current_tetro)
+						for pos in old_pos:
+							if pos in current_state:
+								current_state.pop(pos)
+						current_tetro.rotation += 1
+				else:
+					if event.key == pygame.K_RETURN:
+						GAME_OVER = False
+						SCORE = 0
+						current_state = {}
+						current_tetro = get_next_tetro()
 						next_tetro = get_next_tetro()
-				if event.key == pygame.K_UP and is_rotation_valid(current_tetro, current_state):
-					old_pos = get_tetro_position(current_tetro)
-					for pos in old_pos:
-						if pos in current_state:
-							current_state.pop(pos)
-					current_tetro.rotation += 1
+						
+					if event.key == pygame.K_ESCAPE:
+						break
+					
+			if event.type == pygame.KEYUP:
+				if event.key == pygame.K_DOWN:
+					keydown = False
+			
 					
 		current_tetro_pos = get_tetro_position(current_tetro)
 		for pos in current_tetro_pos:
 			current_state[pos] = current_tetro.color
 		
-		if Keydown == False and (pygame.time.get_ticks() - current_time > 1000):
+		if (keydown == False) and (pygame.time.get_ticks() - current_time > 1000):
 			current_time = pygame.time.get_ticks()
 			if move_tetro(current_tetro, 'DOWN', current_state) == False:
+				if game_over(current_tetro):
+					GAME_OVER = True
+					draw_window(window, grid, next_tetro, GAME_OVER)	
 				clear_filled_rows(current_tetro, current_state)
 				current_tetro = next_tetro
 				next_tetro = get_next_tetro()
 		
 		grid = build_grid(current_state)
-		draw_window(window, grid, next_tetro)
-	
-		
-		
+		draw_window(window, grid, next_tetro, GAME_OVER)	
 		pygame.display.update()
 		clock.tick(FPS)
-			
+
+		
 			
 	
 ##SETUP##
